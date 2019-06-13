@@ -1,0 +1,29 @@
+# Use postgres/example user/password credentials
+version: '3.4'
+services:
+  #База REDIS
+  redis:
+    container_name: infra_redis
+    image: redis
+    ports:
+      - 6379:6379
+  #web админка REDIS
+  redis-commander:
+    container_name: infra_rediscommander
+    hostname: rediscommander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+  #брокер сообщений - NATS
+  nats:
+    container_name: infra_nats
+    image: 'nats:0.8.0'
+    entrypoint: "/gnatsd -DV"
+    expose:
+      - "4222"
+    ports:
+      - "4222:4222"
+    #hostname: nats-server 
