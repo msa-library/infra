@@ -1,12 +1,151 @@
 # Use postgres/example user/password credentials
 version: '3.4'
+
+networks:
+  msa-net:
+    driver: bridge
+
+volumes:
+    prometheus_data: {}
+    grafana_data: {}
 services:
+  
+
+  prometheus:
+    image: prom/prometheus:v2.9.2
+    container_name: infra_prometheus
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    expose:
+      - 9090
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+
+  alertmanager:
+    image: prom/alertmanager:v0.17.0
+    container_name: infra_alertmanager
+    volumes:
+      - ./alertmanager/:/etc/alertmanager/
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    expose:
+      - 9093
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+
+  nodeexporter:
+    image: prom/node-exporter:v0.18.0
+    container_name: infra_nodeexporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    expose:
+      - 9100
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+
+  cadvisor:
+    image: google/cadvisor:v0.33.0
+    container_name: infra_cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      #- /cgroup:/cgroup:ro #doesn't work on MacOS only for Linux
+    restart: unless-stopped
+    expose:
+      - 8080
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+  
+  grafana:
+    image: grafana/grafana:6.1.6
+    container_name: infra_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/datasources
+      - ./grafana/dashboards:/etc/grafana/dashboards
+      - ./grafana/setup.sh:/setup.sh
+    entrypoint: /setup.sh
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=4000
+    restart: unless-stopped
+    expose:
+      - 4000
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+  
+  pushgateway:
+    image: prom/pushgateway:v0.8.0
+    container_name: infra_pushgateway
+    restart: unless-stopped
+    expose:
+      - 9091
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+
+  caddy:
+    image: stefanprodan/caddy
+    container_name: infra_caddy
+    ports:
+      - "4000:4000"
+      - "9090:9090"
+      - "9093:9093"
+      - "9091:9091"
+    volumes:
+      - ./caddy/:/etc/caddy/
+    environment:
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    restart: unless-stopped
+    networks:
+      - msa-net
+    labels:
+      org.label-schema.group: "monitoring"
+
+
   #База REDIS
   redis:
     container_name: infra_redis
-    image: redis
+    image: redis:5.0.5-alpine
     ports:
       - 6379:6379
+    networks:
+      - msa-net
   #web админка REDIS
   redis-commander:
     container_name: infra_rediscommander
@@ -17,6 +156,8 @@ services:
       - REDIS_HOSTS=local:redis:6379
     ports:
       - "8081:8081"
+    networks:
+      - msa-net
   #брокер сообщений - NATS
   nats:
     container_name: infra_nats
@@ -26,4 +167,6 @@ services:
       - "4222"
     ports:
       - "4222:4222"
+    networks:
+      - msa-net
     #hostname: nats-server 

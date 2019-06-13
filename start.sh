@@ -1,11 +1,6 @@
 #!/bin/sh
 
-docker stop infra_redis
-docker stop infra_rediscommander
-docker stop infra_nats
-
-docker rm infra_redis
-docker rm infra_rediscommander
-docker rm infra_nats
+docker stop $(docker ps -a -q --format '{{.Names}}')
+docker rm $(docker ps -a -q --format '{{.Names}}')
 
 docker-compose up -d

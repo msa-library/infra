@@ -1,4 +1,2 @@
 #!/bin/sh
-docker stop infra_redis
-docker stop infra_rediscommander
-docker stop infra_nats
+docker stop $(docker ps -a -q --format '{{.Names}}')
