@@ -1,2 +1,2 @@
 #!/bin/sh
-docker stop $(docker ps -a -q --format '{{.Names}}')
+docker stop $(docker ps -a -q --format '{{.Names}}' | grep infra_)

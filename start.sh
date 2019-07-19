@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker stop $(docker ps -a -q --format '{{.Names}}')
-docker rm $(docker ps -a -q --format '{{.Names}}')
+docker stop $(docker ps -a -q --format '{{.Names}}' | grep infra_)
+docker rm $(docker ps -a -q --format '{{.Names}}' | grep infra_)
 
 docker-compose up -d

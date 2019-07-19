@@ -158,6 +158,7 @@ services:
       - "8081:8081"
     networks:
       - msa-net
+  
   #брокер сообщений - NATS
   nats:
     container_name: infra_nats
@@ -170,3 +171,18 @@ services:
     networks:
       - msa-net
     #hostname: nats-server 
+
+  #S3 хранилище - MINIO
+  minio:
+    container_name: infra_minio
+    image: minio/minio
+    ports:
+      - "9000:9000"
+    networks:
+      - msa-net
+    volumes:
+      - ./minio-data:/data
+    environment:
+      MINIO_ACCESS_KEY: minio_access_key
+      MINIO_SECRET_KEY: minio_secret_key
+    command: server /data
