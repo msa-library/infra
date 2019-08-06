@@ -144,6 +144,15 @@ services:
     image: redis:5.0.5-alpine
     ports:
       - 6379:6379
+    command:
+      - 'redis-server'
+      #- '--loglevel ${REDIS_LOGLEVEL:-warning}'
+      #- '--databases 2'
+      #- '--maxmemory ${REDIS_MAXMEM:-50mb}'
+      #- '--maxmemory-policy ${REDIS_POLICY:-noeviction}'
+      #- '--requirepass ${REDIS_PASS}'
+    volumes:
+      - ./data/redis:/data
     networks:
       - msa-net
   #web админка REDIS
@@ -170,7 +179,7 @@ services:
       - "4222:4222"
     networks:
       - msa-net
-    #hostname: nats-server 
+    hostname: infra_nats
 
   #S3 хранилище - MINIO
   minio:
@@ -181,7 +190,7 @@ services:
     networks:
       - msa-net
     volumes:
-      - ./minio-data:/data
+      - ./data/minio:/data
     environment:
       MINIO_ACCESS_KEY: minio_access_key
       MINIO_SECRET_KEY: minio_secret_key
